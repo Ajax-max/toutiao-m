@@ -13,6 +13,8 @@ import './styles/index.less'
 // 自动设置 REM 基准值 （HTML 标签字体大小）
 import  'amfe-flexible'
 
+import './utils/dayajs'
+
 // import './styles/icon.less'
 
 Vue.use(Vant)

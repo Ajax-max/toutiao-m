@@ -7,11 +7,12 @@
         left-arrow
         @click-left="$router.back()"
     />
-    <van-form @submit="onLogin"
+    <van-form
               :show-error="false"
               ref="login-from"
               :show-error-message="false"
-              @failed="onFailed">
+              @failed="onFailed"
+              @submit="onLogin">
       <!--      登录表单-->
       <van-field
           v-model="user.mobile"
@@ -29,14 +30,22 @@
           :rules="forRules.code"
       >
         <template #button>
+          <van-count-down
+          :time="1000 * 60"
+          format="ss s"
+          v-if="isCountDownShow"
+          @finish="isCountDownShow = false"
+          />
           <van-button size="mini"
                       round
-                      @click.prevent="onSendSms">发送验证码</van-button>
+                      :loading="isSendSmsLoading"
+                      @click.prevent="onSendSms"
+                      v-else>发送验证码</van-button>
         </template>
       </van-field>
     <!--    按钮-->
     <div class="login-btn-wrap">
-      <van-button class="login-btn" type="info" block @click.prevent="onLogin">登录</van-button>
+      <van-button class="login-btn" type="info" block>登录</van-button>
     </div>
     </van-form>
   </div>
@@ -45,7 +54,7 @@
 <script>
 import { login, sendSms} from "../../api/user";
 import {Toast} from 'vant'
-import axios from "axios";
+
 
 export default {
   name: "login-index",
@@ -57,10 +66,13 @@ export default {
         mobile:"",
         code:""
       },
+      // 判断倒计时显示
+      isCountDownShow:false,
+      isSendSmsLoading: false,
       forRules:{
         mobile: [
           {required:true, message:'请输入手机号'},
-          {pattern:/^1[3|5|7|8|9]\d{9}}$/, message: '手机格式错误'}
+          {pattern:/^1[3|5|7|8|9]\d{9}$/,message: '手机格式错误'}
         ],
         code:[
           {required:true, message:'请输入密码'},
@@ -77,15 +89,20 @@ export default {
       Toast.loading({
         message: '加载中...',
         forbidClick: true,
-        duration:1000
+        duration:0
       })
       try {
-        const res = await login(this.user)
-        console.log(res)
+        const {data} = await login(this.user)
+        // console.log(data)
+        // console.log(data.data)
+        // 将后端返回的用户登录状态（token等数据）放到Vuex容器里
+        this.$store.commit('setUser',data.data)
+        // 登录成功跳转到原来页面
+        this.$router.back()
         Toast.success('登录成功')
       } catch (err){
-        console.log(err)
-        console.log('登录失败',err)
+        // console.log(err)
+        // console.log('登录失败')
         Toast.fail('登录失败')
       }
       // const res = await login(this.user)
@@ -106,10 +123,23 @@ export default {
         await this.$refs['login-from'].validate('mobile')
         const res = await sendSms(this.user.mobile)
         console.log(res)
+        // 短信发出去时隐藏按钮显示倒计时
+        this.isCountDownShow = true
       }catch (err){
+        console.dir(err)
+        let message = ''
+        if(err && err.response && err.response.status === 429){
+          // 发送短信失败的错误
+          message = '发送太频繁了'
+        }else if (err.name === 'mobile'){
+          message = err.message
+        }else {
+          message = "发送失败"
+        }
+        this.isSendSmsLoading = false
         //提示用户手机号码有误
         this.$toast({
-          message:err.message,
+          message:message,
           position:'top'
         })
       }
