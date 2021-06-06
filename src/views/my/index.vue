@@ -22,6 +22,7 @@
               size="small"
               round
               class="update-btn"
+              to="/user/profile"
           >编辑资料</van-button>
         </van-cell>
 <!--        头像 昵称 编辑资料-->
